@@ -13,11 +13,13 @@ import { getCountryName, getFlagCode } from '../utils/countries';
 import { importGroupMatches, hasExistingMatches } from '../utils/importMatches';
 import { Trash2, Plus, Save, RefreshCw, X, Building2, Upload, FileDown } from 'lucide-react';
 import { format } from 'date-fns';
+import Footer from '../components/Footer';
 
 export default function Admin() {
   const { currentUser } = useAuth();
   const isFullAdmin = currentUser?.isAdmin === true;
-  const canManageUsers = currentUser?.canManageUsers === true;
+  const managedClientIds = currentUser?.managedClientIds || (currentUser?.canManageUsers === true && currentUser?.clientId ? [currentUser.clientId] : []);
+  const canManageUsers = managedClientIds.length > 0;
   const [matches, setMatches] = useState([]);
   const [clients, setClients] = useState([]);
   const [users, setUsers] = useState([]);
@@ -319,14 +321,13 @@ export default function Admin() {
                 const grouped = {};
                 const clientMap = Object.fromEntries(clients.map(c => [c.id, c]));
                 for (const user of users) {
-                  if (canManageUsers && !isFullAdmin && user.clientId !== currentUser?.clientId) continue;
+                  if (canManageUsers && !isFullAdmin && !managedClientIds.includes(user.clientId)) continue;
                   const key = user.clientName || user.clientId || 'Sin asignar';
                   if (!grouped[key]) grouped[key] = [];
                   grouped[key].push(user);
                 }
                 return Object.entries(grouped).map(([groupName, groupUsers]) => {
                   const client = clientMap[groupUsers[0]?.clientId];
-                  const hasUserControl = client?.enableUserControl === true;
                   return (
                   <div key={groupName}>
                     <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">
@@ -341,7 +342,7 @@ export default function Admin() {
                               {user.isAdmin && (
                                 <span className="ml-2 text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">admin</span>
                               )}
-                              {user.canManageUsers && (
+                              {(user.managedClientIds?.length > 0 || user.canManageUsers) && (
                                 <span className="ml-1 text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">gestor</span>
                               )}
                             </div>
@@ -352,10 +353,11 @@ export default function Admin() {
                               <label className="flex items-center gap-1.5 text-xs cursor-pointer select-none">
                                 <input
                                   type="checkbox"
-                                  checked={user.canManageUsers === true}
+                                  checked={user.managedClientIds?.length > 0 || user.canManageUsers === true}
                                   onClick={(e) => {
                                     e.preventDefault();
-                                    setManagerConfirm({ userId: user.id, userName: user.displayName || user.email, canManageUsers: user.canManageUsers !== true });
+                                    const currentManaged = user.managedClientIds || (user.canManageUsers ? [user.clientId].filter(Boolean) : []);
+                                    setManagerConfirm({ userId: user.id, userName: user.displayName || user.email, clientId: user.clientId, managedClientIds: [...currentManaged] });
                                   }}
                                   className="h-3.5 w-3.5 rounded border-gray-300 text-amber-500 focus:ring-amber-400 pointer-events-none"
                                   readOnly
@@ -363,7 +365,7 @@ export default function Admin() {
                                 <span className="text-muted-foreground">Gestor</span>
                               </label>
                             )}
-                            {hasUserControl && (canManageUsers || isFullAdmin) && (
+                            {(canManageUsers || isFullAdmin) && (
                             <div
                               onClick={() => setToggleConfirm({ userId: user.id, userName: user.displayName || user.email, enabled: user.enabled !== false })}
                               className="flex items-center gap-2 cursor-pointer select-none"
@@ -774,9 +776,9 @@ export default function Admin() {
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
           onClick={(e) => { if (e.target === e.currentTarget) setManagerConfirm(null); }}
         >
-          <div className="rounded-xl bg-gradient-to-b from-gray-800 to-gray-900 shadow-2xl w-full max-w-sm mx-4 overflow-hidden">
+          <div className="rounded-xl bg-gradient-to-b from-gray-800 to-gray-900 shadow-2xl w-full max-w-md mx-4 overflow-hidden">
             <div className="flex items-center justify-between p-5 pb-2">
-              <h2 className="text-lg font-bold text-white">Confirmar permiso</h2>
+              <h2 className="text-lg font-bold text-white">Permisos de gestor</h2>
               <button
                 onClick={() => setManagerConfirm(null)}
                 className="p-1 rounded-full text-white/60 hover:text-white hover:bg-white/10 transition-colors"
@@ -786,13 +788,33 @@ export default function Admin() {
             </div>
             <div className="p-5 pt-3 space-y-5">
               <p className="text-sm text-gray-300 text-center">
-                ¿Estás seguro de {managerConfirm.canManageUsers ? 'asignar' : 'quitar'} permisos de gestor a <strong className="text-white">{managerConfirm.userName}</strong>?
+                Selecciona las quinielas que <strong className="text-white">{managerConfirm.userName}</strong> podrá gestionar:
               </p>
-              <p className="text-xs text-gray-400 text-center">
-                {managerConfirm.canManageUsers
-                  ? 'Podrá habilitar/deshabilitar usuarios de su cliente.'
-                  : 'Ya no podrá habilitar/deshabilitar usuarios.'}
-              </p>
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {clients.length === 0 ? (
+                  <p className="text-sm text-gray-400 text-center">No hay quinielas disponibles</p>
+                ) : (
+                  clients.map(c => (
+                    <label
+                      key={c.id}
+                      className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 cursor-pointer transition-colors"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={managerConfirm.managedClientIds.includes(c.id)}
+                        onChange={() => {
+                          const newIds = managerConfirm.managedClientIds.includes(c.id)
+                            ? managerConfirm.managedClientIds.filter(id => id !== c.id)
+                            : [...managerConfirm.managedClientIds, c.id];
+                          setManagerConfirm({ ...managerConfirm, managedClientIds: newIds });
+                        }}
+                        className="h-4 w-4 rounded border-gray-300 text-amber-500 focus:ring-amber-400"
+                      />
+                      <span className="text-sm text-white">{c.name}</span>
+                    </label>
+                  ))
+                )}
+              </div>
               <div className="flex gap-3">
                 <Button
                   variant="outline"
@@ -803,19 +825,22 @@ export default function Admin() {
                 </Button>
                 <Button
                   className="flex-1"
+                  disabled={managerConfirm.managedClientIds.length === 0}
                   onClick={async () => {
-                    await updateDoc(doc(db, 'users', managerConfirm.userId), { canManageUsers: managerConfirm.canManageUsers });
-                    setUsers(prev => prev.map(u => u.id === managerConfirm.userId ? { ...u, canManageUsers: managerConfirm.canManageUsers } : u));
+                    const newManagedIds = managerConfirm.managedClientIds;
+                    await updateDoc(doc(db, 'users', managerConfirm.userId), { managedClientIds: newManagedIds, canManageUsers: newManagedIds.length > 0 });
+                    setUsers(prev => prev.map(u => u.id === managerConfirm.userId ? { ...u, managedClientIds: newManagedIds, canManageUsers: newManagedIds.length > 0 } : u));
                     setManagerConfirm(null);
                   }}
                 >
-                  {managerConfirm.canManageUsers ? 'Asignar' : 'Quitar'}
+                  Guardar
                 </Button>
               </div>
             </div>
           </div>
         </div>
       )}
+      <Footer />
     </div>
   );
 }

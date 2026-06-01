@@ -3,6 +3,7 @@ import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { getCountryName, getFlagCode } from '../utils/countries';
+import Footer from '../components/Footer';
 
 function computeStandings(matches) {
   const groupTeams = {};
@@ -182,6 +183,7 @@ export default function Groups() {
           </Card>
         ))}
       </div>
+      <Footer />
     </div>
   );
 }

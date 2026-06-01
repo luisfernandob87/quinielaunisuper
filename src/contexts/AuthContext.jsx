@@ -18,7 +18,7 @@ export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  async function signup(email, password, displayName, clientId, clientName) {
+  async function signup(email, password, displayName, employeeCode, clientId, clientName) {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
     const usersSnap = await getDocs(collection(db, 'users'));
@@ -26,11 +26,12 @@ export function AuthProvider({ children }) {
     const userData = {
       email: user.email,
       displayName,
+      employeeCode,
       clientId,
       clientName,
       points: 0,
       isAdmin: isFirstUser,
-      enabled: isFirstUser,
+      enabled: true,
       createdAt: new Date().toISOString()
     };
     await setDoc(doc(db, 'users', user.uid), userData);

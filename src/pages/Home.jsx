@@ -7,6 +7,7 @@ import { Button } from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
 import { Trophy, Calendar, BarChart3, Users, Star, Target, Swords } from 'lucide-react';
 import { calculatePoints } from '../utils/scoring';
+import Footer from '../components/Footer';
 
 export default function Home() {
   const { currentUser } = useAuth();
@@ -44,63 +45,64 @@ export default function Home() {
 
   if (!currentUser) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+      <div className="min-h-screen flex flex-col items-center justify-center p-4 relative overflow-hidden">
         {/* Background gradient */}
         <div className="absolute inset-0 bg-gradient-to-br from-emerald-950 via-green-900 to-emerald-950" />
         {/* Decorative circles */}
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-yellow-500/5 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-green-500/10 rounded-full blur-3xl" />
 
-        <div className="text-center max-w-2xl relative z-10">
-          <div className="mb-8">
-            <img src="/img/logo-lg.png" alt="Quiniela 2026" className="w-36 h-36 mx-auto object-contain animate-float drop-shadow-[0_0_25px_rgba(255,215,0,0.4)]" />
+        <div className="text-center max-w-3xl relative z-10 flex-1 flex flex-col justify-center">
+          <div className="mb-6">
+            <img src="/img/logo-lg.png" alt="Quiniela 2026" className="w-28 h-28 mx-auto object-contain animate-float drop-shadow-[0_0_25px_rgba(255,215,0,0.4)]" />
           </div>
-          <h1 className="text-5xl sm:text-6xl font-extrabold text-white mb-3 tracking-tight">
+          <h1 className="text-4xl sm:text-5xl font-extrabold text-white mb-2 tracking-tight">
             Quiniela <span className="text-yellow-300">2026</span>
           </h1>
-          <p className="text-xl text-yellow-100/80 font-medium mb-2">
+          <p className="text-lg text-yellow-100/80 font-medium mb-1">
             Copa Mundial de Fútbol
           </p>
-          <p className="text-lg text-white/60 mb-10 max-w-lg mx-auto">
+          <p className="text-base text-white/60 mb-8 max-w-lg mx-auto">
             Predice los resultados del Mundial y compite con tus amigos
           </p>
           <Link to="/login">
-            <Button variant="gold" size="xl" className="animate-pulse-gold shadow-2xl shadow-yellow-500/20">
+            <Button variant="gold" size="lg" className="animate-pulse-gold shadow-2xl shadow-yellow-500/20">
               <Trophy className="w-5 h-5 mr-2" />
               Comenzar a jugar
             </Button>
           </Link>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-20">
-            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6 text-center hover:bg-white/10 transition-all duration-300 hover:scale-105 hover:shadow-xl group">
-              <div className="w-14 h-14 rounded-full bg-yellow-500/10 flex items-center justify-center mx-auto mb-4 group-hover:bg-yellow-500/20 transition-colors">
-                <Target className="w-7 h-7 text-yellow-400" />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-12">
+            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-4 text-center hover:bg-white/10 transition-all duration-300 hover:scale-105 hover:shadow-xl group">
+              <div className="w-12 h-12 rounded-full bg-yellow-500/10 flex items-center justify-center mx-auto mb-3 group-hover:bg-yellow-500/20 transition-colors">
+                <Target className="w-6 h-6 text-yellow-400" />
               </div>
-              <h3 className="text-white font-semibold mb-2">Predice Resultados</h3>
-              <p className="text-sm text-white/50">
-                Adivina el marcador exacto de cada partido
+              <h3 className="text-white font-semibold mb-1 text-sm">Predice Resultados</h3>
+              <p className="text-xs text-white/50">
+                Adivina el marcador exacto
               </p>
             </div>
-            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6 text-center hover:bg-white/10 transition-all duration-300 hover:scale-105 hover:shadow-xl group">
-              <div className="w-14 h-14 rounded-full bg-yellow-500/10 flex items-center justify-center mx-auto mb-4 group-hover:bg-yellow-500/20 transition-colors">
-                <Star className="w-7 h-7 text-yellow-400" />
+            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-4 text-center hover:bg-white/10 transition-all duration-300 hover:scale-105 hover:shadow-xl group">
+              <div className="w-12 h-12 rounded-full bg-yellow-500/10 flex items-center justify-center mx-auto mb-3 group-hover:bg-yellow-500/20 transition-colors">
+                <Star className="w-6 h-6 text-yellow-400" />
               </div>
-              <h3 className="text-white font-semibold mb-2">Gana Puntos</h3>
-              <p className="text-sm text-white/50">
-                3 pts resultado exacto, 1 pt ganador correcto
+              <h3 className="text-white font-semibold mb-1 text-sm">Gana Puntos</h3>
+              <p className="text-xs text-white/50">
+                3 pts exacto, 1 pt ganador
               </p>
             </div>
-            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6 text-center hover:bg-white/10 transition-all duration-300 hover:scale-105 hover:shadow-xl group">
-              <div className="w-14 h-14 rounded-full bg-yellow-500/10 flex items-center justify-center mx-auto mb-4 group-hover:bg-yellow-500/20 transition-colors">
-                <Swords className="w-7 h-7 text-yellow-400" />
+            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-4 text-center hover:bg-white/10 transition-all duration-300 hover:scale-105 hover:shadow-xl group">
+              <div className="w-12 h-12 rounded-full bg-yellow-500/10 flex items-center justify-center mx-auto mb-3 group-hover:bg-yellow-500/20 transition-colors">
+                <Swords className="w-6 h-6 text-yellow-400" />
               </div>
-              <h3 className="text-white font-semibold mb-2">Compite</h3>
-              <p className="text-sm text-white/50">
-                Sube en el ranking y demuestra quién sabe más
+              <h3 className="text-white font-semibold mb-1 text-sm">Compite</h3>
+              <p className="text-xs text-white/50">
+                Sube en el ranking
               </p>
             </div>
           </div>
         </div>
+        <Footer />
       </div>
     );
   }
@@ -187,6 +189,7 @@ export default function Home() {
           </div>
         </CardContent>
       </Card>
+      <Footer />
     </div>
   );
 }

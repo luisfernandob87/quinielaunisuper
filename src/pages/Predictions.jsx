@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import MatchCard from '../components/MatchCard';
 import { Select } from '../components/ui/Select';
 import { calculatePoints } from '../utils/scoring';
+import Footer from '../components/Footer';
 
 export default function Predictions() {
   const [matches, setMatches] = useState([]);
@@ -13,7 +14,6 @@ export default function Predictions() {
   const [filter, setFilter] = useState('all');
   const [pendingOnly, setPendingOnly] = useState(false);
   const [clock, setClock] = useState(Date.now());
-  const [userControlEnabled, setUserControlEnabled] = useState(false);
   const { currentUser } = useAuth();
 
   useEffect(() => {
@@ -31,12 +31,6 @@ export default function Predictions() {
 
   async function loadMatches() {
     try {
-      if (currentUser?.clientId) {
-        const clientSnap = await getDoc(doc(db, 'clients', currentUser.clientId));
-        if (clientSnap.exists()) {
-          setUserControlEnabled(clientSnap.data().enableUserControl === true);
-        }
-      }
       const q = query(collection(db, 'matches'));
       const snapshot = await getDocs(q);
       const matchesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -64,7 +58,7 @@ export default function Predictions() {
 
   async function handleUpdatePrediction(matchId, prediction) {
     if (!currentUser) return;
-    if (userControlEnabled && currentUser.enabled === false) {
+    if (currentUser.enabled === false) {
       console.warn('Usuario deshabilitado');
       return;
     }
@@ -121,7 +115,7 @@ export default function Predictions() {
   }
 
   function canPredict(match) {
-    if (userControlEnabled && currentUser?.enabled === false) return false;
+    if (currentUser?.enabled === false) return false;
     if (match.result && match.result.homeScore !== null) return false;
     const matchTime = match.dateTimestamp || (match.date ? new Date(match.date).getTime() : 0);
     if (matchTime > 0 && Date.now() > matchTime) return false;
@@ -159,7 +153,7 @@ export default function Predictions() {
         </div>
       </div>
 
-      {userControlEnabled && currentUser?.enabled === false && (
+      {currentUser?.enabled === false && (
         <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg mb-6 text-sm">
           Tu cuenta está deshabilitada. Comunícate con el administrador para habilitar tus pronósticos.
         </div>
@@ -184,6 +178,7 @@ export default function Predictions() {
           ))}
         </div>
       )}
+      <Footer />
     </div>
   );
 }

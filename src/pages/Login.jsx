@@ -8,6 +8,7 @@ import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import { Label } from '../components/ui/Label';
 import { Select } from '../components/ui/Select';
+import Footer from '../components/Footer';
 
 
 export default function Login() {
@@ -15,6 +16,7 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const [employeeCode, setEmployeeCode] = useState('');
   const [clientId, setClientId] = useState('');
   const [clients, setClients] = useState([]);
   const [error, setError] = useState('');
@@ -51,13 +53,18 @@ export default function Login() {
           setLoading(false);
           return;
         }
+        if (!/^\d{5}$/.test(employeeCode)) {
+          setError('El código de empleado debe ser exactamente 5 números');
+          setLoading(false);
+          return;
+        }
         if (hasClients && !clientId) {
           setError('Selecciona una quiniela');
           setLoading(false);
           return;
         }
         const client = clients.find(c => c.id === clientId);
-        await signup(email, password, displayName, clientId || '', client?.name || '');
+        await signup(email, password, displayName, employeeCode, clientId || '', client?.name || '');
       }
       window.scrollTo(0, 0);
       navigate('/');
@@ -77,13 +84,14 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen flex flex-col p-4 relative overflow-hidden">
       {/* Background */}
       <div className="absolute inset-0 bg-gradient-to-br from-emerald-950 via-green-900 to-emerald-950" />
       <div className="absolute top-1/3 left-1/3 w-72 h-72 bg-yellow-500/5 rounded-full blur-3xl" />
       <div className="absolute bottom-1/3 right-1/3 w-72 h-72 bg-green-500/10 rounded-full blur-3xl" />
 
-      <div className="w-full max-w-md relative z-10 animate-fadeInUp">
+      <div className="flex items-center justify-center flex-1 relative z-10">
+        <div className="w-full max-w-md animate-fadeInUp">
         <div className="text-center mb-8">
           <img src="/img/logo-md.png" alt="Quiniela 2026" className="w-20 h-20 mx-auto mb-4 object-contain animate-float" />
           <h1 className="text-3xl font-bold text-white">
@@ -110,6 +118,19 @@ export default function Login() {
                       value={displayName}
                       onChange={(e) => setDisplayName(e.target.value)}
                       placeholder="Tu nombre"
+                      required
+                      className="bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-yellow-400/50 focus:ring-yellow-400/30"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="employeeCode" className="text-white/80">Código de Empleado</Label>
+                    <Input
+                      id="employeeCode"
+                      type="text"
+                      value={employeeCode}
+                      onChange={(e) => setEmployeeCode(e.target.value.replace(/\D/g, '').slice(0, 5))}
+                      placeholder="5 dígitos"
+                      maxLength={5}
                       required
                       className="bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-yellow-400/50 focus:ring-yellow-400/30"
                     />
@@ -184,7 +205,9 @@ export default function Login() {
             </div>
           </CardContent>
         </Card>
+        </div>
       </div>
+      <Footer />
     </div>
   );
 }

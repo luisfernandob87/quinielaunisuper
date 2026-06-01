@@ -3,33 +3,73 @@ import { collection, getDocs, getDoc, doc, query, where } from 'firebase/firesto
 import { db } from '../firebase/config';
 import { useAuth } from '../contexts/AuthContext';
 import { Card, CardContent } from '../components/ui/Card';
+import { Select } from '../components/ui/Select';
 import { Trophy, Medal, Crown, Star } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { calculatePoints } from '../utils/scoring';
+import Footer from '../components/Footer';
 
 export default function Ranking() {
   const { currentUser } = useAuth();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [clients, setClients] = useState([]);
+  const [selectedClientId, setSelectedClientId] = useState('');
+  const [selectedClientName, setSelectedClientName] = useState('');
 
   useEffect(() => {
-    if (!currentUser?.clientId) {
+    if (!currentUser) {
       setLoading(false);
       return;
     }
-    loadRanking();
+    initRanking();
   }, [currentUser]);
 
-  async function loadRanking() {
+  async function initRanking() {
     try {
-      const clientSnap = await getDoc(doc(db, 'clients', currentUser.clientId));
+      const clientsSnap = await getDocs(collection(db, 'clients'));
+      const allClients = clientsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      const isAdmin = currentUser?.isAdmin === true;
+      const managedIds = currentUser?.managedClientIds ||
+        (currentUser?.canManageUsers === true && currentUser?.clientId ? [currentUser.clientId] : []);
+
+      let visible;
+      if (isAdmin) {
+        visible = allClients;
+      } else if (managedIds.length > 0) {
+        const ids = new Set([...managedIds, currentUser.clientId].filter(Boolean));
+        visible = allClients.filter(c => ids.has(c.id));
+      } else {
+        visible = allClients.filter(c => c.id === currentUser.clientId);
+      }
+
+      setClients(visible);
+      const defaultClient = visible.find(c => c.id === currentUser.clientId) || visible[0];
+      if (defaultClient) {
+        setSelectedClientId(defaultClient.id);
+        setSelectedClientName(defaultClient.name);
+        await loadRanking(defaultClient.id);
+      } else {
+        setLoading(false);
+      }
+    } catch (error) {
+      console.error('Error inicializando ranking:', error);
+      setLoading(false);
+    }
+  }
+
+  async function loadRanking(clientId) {
+    setLoading(true);
+    try {
+      const clientSnap = await getDoc(doc(db, 'clients', clientId));
       const userControlEnabled = clientSnap.exists() && clientSnap.data().enableUserControl === true;
 
-      const usersQuery = query(collection(db, 'users'), where('clientId', '==', currentUser.clientId));
+      const usersQuery = query(collection(db, 'users'), where('clientId', '==', clientId));
       const usersSnap = await getDocs(usersQuery);
       const matchesQuery = query(collection(db, 'matches'));
       const matchesSnap = await getDocs(matchesQuery);
-      const predictionsQuery = query(collection(db, 'predictions'), where('clientId', '==', currentUser.clientId));
+      const predictionsQuery = query(collection(db, 'predictions'), where('clientId', '==', clientId));
       const predictionsSnap = await getDocs(predictionsQuery);
 
       const matches = matchesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -65,6 +105,13 @@ export default function Ranking() {
     }
   }
 
+  async function handleClientChange(clientId) {
+    setSelectedClientId(clientId);
+    const client = clients.find(c => c.id === clientId);
+    if (client) setSelectedClientName(client.name);
+    await loadRanking(clientId);
+  }
+
   function getMedal(rank) {
     if (rank === 1) return { icon: Crown, color: 'text-yellow-400', bg: 'bg-yellow-400', label: 'Oro' };
     if (rank === 2) return { icon: Medal, color: 'text-gray-300', bg: 'bg-gray-300', label: 'Plata' };
@@ -88,10 +135,26 @@ export default function Ranking() {
   return (
     <div className="max-w-5xl mx-auto px-4 py-8 animate-fadeInUp">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-8">
-        <div>
-          <h1 className="text-3xl font-bold">Ranking</h1>
-          <p className="text-muted-foreground text-sm">{users.length} participantes habilitados</p>
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold">Ranking</h1>
+        <div className="flex items-center gap-4 mt-2 flex-wrap">
+          {clients.length > 1 && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Quiniela:</span>
+              <Select
+                value={selectedClientId}
+                onChange={(e) => handleClientChange(e.target.value)}
+                className="w-auto min-w-[200px]"
+              >
+                {clients.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </Select>
+            </div>
+          )}
+          <p className="text-sm text-muted-foreground">
+            {clients.length === 1 && <>{selectedClientName} &middot; </>}{users.length} participantes
+          </p>
         </div>
       </div>
 
@@ -159,6 +222,7 @@ export default function Ranking() {
           </div>
         )}
       </div>
+      <Footer />
     </div>
   );
 }
@@ -185,6 +249,7 @@ function PodiumItem({ user, medal, icon: Icon, color, bg, height, className, isF
         bg
       )}>
         <span className="font-bold text-sm text-center leading-tight">{user.displayName}</span>
+        <span className="text-[10px] opacity-60 mt-0.5">{user.employeeCode}</span>
         <span className="text-xs opacity-70 mt-0.5">
           {medal}
           {isCurrentUser && (
@@ -242,6 +307,7 @@ function RankingRow({ user, isCurrentUser, isTop3 }) {
                 )}
               </h3>
               <p className="text-sm text-muted-foreground">{user.email}</p>
+              <p className="text-xs text-muted-foreground/60">Código: {user.employeeCode}</p>
             </div>
           </div>
           <div className={cn(
