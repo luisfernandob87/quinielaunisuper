@@ -8,11 +8,12 @@ import { Button } from '../components/ui/Button';
 import { Label } from '../components/ui/Label';
 import { Select } from '../components/ui/Select';
 import CountrySelector from '../components/ui/CountrySelector';
-import { recalculateAllPoints } from '../utils/scoring';
+import { recalculateAllPoints, calculatePoints } from '../utils/scoring';
 import { getCountryName, getFlagCode } from '../utils/countries';
 import { importGroupMatches, hasExistingMatches } from '../utils/importMatches';
 import { Trash2, Plus, Save, RefreshCw, X, Building2, Upload, FileDown } from 'lucide-react';
 import { format } from 'date-fns';
+import * as XLSX from 'xlsx';
 import Footer from '../components/Footer';
 
 export default function Admin() {
@@ -75,8 +76,29 @@ export default function Admin() {
     try {
       const snapshot = await getDocs(collection(db, 'users'));
       const usersData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-      usersData.sort((a, b) => a.displayName?.localeCompare(b.displayName) || 0);
-      setUsers(usersData);
+
+      const matchesSnap = await getDocs(query(collection(db, 'matches')));
+      const matches = matchesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      const predictionsSnap = await getDocs(collection(db, 'predictions'));
+      const predictions = predictionsSnap.docs.map(d => d.data());
+
+      const calculatedPoints = {};
+      for (const pred of predictions) {
+        const match = matches.find(m => m.id === pred.matchId);
+        if (!match || !match.result || match.result.homeScore === null) continue;
+        const points = calculatePoints(pred, match.result);
+        if (!calculatedPoints[pred.userId]) calculatedPoints[pred.userId] = 0;
+        calculatedPoints[pred.userId] += points;
+      }
+
+      const usersWithPoints = usersData.map(u => ({
+        ...u,
+        points: calculatedPoints[u.id] || 0
+      }));
+
+      usersWithPoints.sort((a, b) => b.points - a.points || a.displayName?.localeCompare(b.displayName) || 0);
+      setUsers(usersWithPoints);
     } catch (error) {
       console.error('Error cargando usuarios:', error);
     }
@@ -210,6 +232,32 @@ export default function Admin() {
     }
   }
 
+  function handleExportExcel() {
+    const filtered = users.filter(user => {
+      if (isFullAdmin) return true;
+      if (canManageUsers) return managedClientIds.includes(user.clientId);
+      return false;
+    });
+
+    const data = filtered.map(u => ({
+      'Nombre': u.displayName || '',
+      'Email': u.email || '',
+      'Código': u.employeeCode || '',
+      'Cliente': u.clientName || u.clientId || 'Sin asignar',
+      'Puntos': u.points || 0,
+      'Habilitado': u.enabled !== false ? 'Sí' : 'No'
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Usuarios');
+
+    const colWidths = Object.keys(data[0] || data).map(k => ({ wch: Math.max(k.length, 20) }));
+    ws['!cols'] = colWidths;
+
+    XLSX.writeFile(wb, `usuarios_${new Date().toISOString().slice(0,10)}.xlsx`);
+  }
+
   async function handleImport() {
     const existing = await hasExistingMatches(db);
     if (existing) {
@@ -309,9 +357,15 @@ export default function Admin() {
 
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Building2 className="w-5 h-5" />
-            Usuarios por Quiniela
+          <CardTitle className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Building2 className="w-5 h-5" />
+              Usuarios por Quiniela
+            </div>
+            <Button variant="outline" size="sm" onClick={handleExportExcel}>
+              <FileDown className="w-4 h-4 mr-1" />
+              Exportar Excel
+            </Button>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -347,8 +401,13 @@ export default function Admin() {
                               )}
                             </div>
                             <div className="text-xs text-muted-foreground truncate">{user.email}</div>
+                            <div className="text-xs text-muted-foreground/60 truncate">Código: {user.employeeCode}</div>
                           </div>
-                          <div className="flex items-center gap-3 shrink-0 ml-3">
+                          <div className="flex items-center gap-4 shrink-0 ml-3">
+                            <div className="text-right">
+                              <div className="text-sm font-bold">{user.points}</div>
+                              <div className="text-[10px] text-muted-foreground">pts</div>
+                            </div>
                             {isFullAdmin && (
                               <label className="flex items-center gap-1.5 text-xs cursor-pointer select-none">
                                 <input

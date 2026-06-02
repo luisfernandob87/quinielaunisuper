@@ -62,9 +62,6 @@ export default function Ranking() {
   async function loadRanking(clientId) {
     setLoading(true);
     try {
-      const clientSnap = await getDoc(doc(db, 'clients', clientId));
-      const userControlEnabled = clientSnap.exists() && clientSnap.data().enableUserControl === true;
-
       const usersQuery = query(collection(db, 'users'), where('clientId', '==', clientId));
       const usersSnap = await getDocs(usersQuery);
       const matchesQuery = query(collection(db, 'matches'));
@@ -77,7 +74,7 @@ export default function Ranking() {
 
       const usersData = usersSnap.docs
         .map(d => ({ id: d.id, ...d.data() }))
-        .filter(u => !userControlEnabled || u.enabled !== false);
+        .filter(u => u.enabled !== false);
 
       const calculatedPoints = {};
       for (const pred of predictions) {
