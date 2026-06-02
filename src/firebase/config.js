@@ -8,10 +8,12 @@ const firebaseConfig = {
   projectId: "quinielaunisuper",
   storageBucket: "quinielaunisuper.firebasestorage.app",
   messagingSenderId: "279761962120",
-  appId: "1:279761962120:web:a503a3f6bc95b241c0cb3d"
+  appId: "1:279761962120:web:a503a3f6bc95b241c0cb3d",
+  measurementId: "G-YK5MNPFSCY"
 };
 
 const app = initializeApp(firebaseConfig);
+
 export const auth = getAuth(app);
 export const db = initializeFirestore(app, {
   localCache: persistentLocalCache({
